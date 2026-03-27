@@ -11,21 +11,40 @@ Please note there may be some rough work done here since this was originally onl
 I would highly recommend the standard ollama package for most work: https://www.npmjs.com/package/ollama
 
 */
+
+/**
+ * @typedef {Function} FetchImplementation
+ * @param {string|URL|globalThis.Request} url 
+ * @param {RequestInit} options 
+ * @returns {Promise<Response>}
+ */
 const fetchWithTimeout = require("./fetch-timeout");
 
 class OllamaClient {
-    constructor() {
-        // config
-        // lightweight ollama model i have rn
-        this.aiModel = 'gemma3:4b';
-        /**
-         * boolean for models except for GPT-OSS which requires string for osme reason
-         * @type {boolean|"low"|"medium"|"high"}
-         */
-        this.aiThinking = false;
-        this.timeout = 25 * 1000; // 25 seconds
+    /**
+     * @typedef {boolean|"low"|"medium"|"high"} ModelThinking
+     * boolean for all models, except for GPT-OSS
+     */
+    /**
+     * @typedef {Object} OllamaOptions
+     * @property {string} model which AI Model to use
+     * @property {ModelThinking} thinking enables thinking if true, or if a specific level is needed, sets it to a certain level
+     * @property {number?} timeout milliseconds request timeout if specified and the default fetch provider is used. default is 25 * 1000
+     * @property {string?} url which API url to use, default is http://localhost:11434/api/chat
+     * @property {FetchImplementation?} fetch A function that acts like node's fetch function. Will make timeout unimplemented if you don't change anything.
+     */
 
-        this._api_url = env.get("OLLAMA_URL");
+    /**
+     * Create an OllamaClient with its own chats
+     * @param {OllamaOptions} options options to give ollama
+     */
+    constructor(options) {
+        this.aiModel = options.model;
+        this.aiThinking = options.thinking;
+        this.timeout = typeof options.timeout === "number" ? options.timeout : 25 * 1000; // 25 seconds
+
+        this._api_url = options.url || "http://localhost:11434/api/chat";
+        this._fetch = options.fetch || (typeof options.timeout === "number" ? fetchWithTimeout : fetch);
         this._chatHistories = {};
     }
 
@@ -36,6 +55,9 @@ class OllamaClient {
         const newApiUrl = url;
         // Update the api_url variable
         this._api_url = newApiUrl;
+    }
+    set fetchFunction(func) {
+        this._fetch = func;
     }
 
     // management
@@ -136,7 +158,7 @@ class OllamaClient {
 
     /** @returns {Promise<AIResponse>} */
     chatWithMessages(messages, format) {
-        return fetchWithTimeout(this._api_url, {
+        return this._fetch(this._api_url, {
             method: 'POST',
             timeout: this.timeout,
             headers: {
