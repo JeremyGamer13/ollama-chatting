@@ -1,6 +1,8 @@
 # Notice
 This is heavily work-in-progress. Do not use for your own projects right now.
 
+Marking as 1.0.0 since everything is done, but I have yet to extensively use this version to it's fullest potential.
+
 # ollama-chatting
 Allows you to chat with local Ollama models using the Ollama app's API.
 Please note there may be some rough work done here since this was originally only made for personal projects.

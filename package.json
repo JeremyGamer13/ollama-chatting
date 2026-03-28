@@ -1,0 +1,25 @@
+{
+    "name": "ollama-chatting",
+    "version": "1.0.0",
+    "description": "Allows you to chat with local Ollama models using the Ollama app's API.",
+    "keywords": [
+        "ollama",
+        "ai",
+        "llm",
+        "local"
+    ],
+    "homepage": "https://github.com/JeremyGamer13/ollama-chatting#readme",
+    "bugs": {
+        "url": "https://github.com/JeremyGamer13/ollama-chatting/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/JeremyGamer13/ollama-chatting.git"
+    },
+    "license": "MIT",
+    "type": "commonjs",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    }
+}
