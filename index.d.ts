@@ -1,86 +1,79 @@
-import * as Ollama from 'ollama';
+import type { Ollama as OllamaBase } from 'ollama';
+import type * as ollama from 'ollama';
 
-import { Ollama, ChatResponse, GenerateResponse, Message, ToolCall } from 'ollama';
-
-export declare type ToolCallback = (call: ToolCall) => string | Promise<string>;
-
-export declare interface GenerateRequest extends Ollama.GenerateRequest {
-    stream?: true;
-    /** Abort timeout in milliseconds */
-    timeout?: number;
-}
-
-export declare interface GenerateResponse extends Ollama.GenerateResponse {
-    response: string;
-    thinking?: string;
-    chunk?: MessageChunk;
-}
-
-export declare interface ChatRequest extends Ollama.ChatRequest {
-    stream?: true;
-    /** Abort timeout in milliseconds */
-    timeout?: number;
-}
-
-export declare interface ChatResponse extends Ollama.ChatResponse {
-    /**
-     * Additional messages related to this response. 
-     * If a Message is created due to a ChatStreamCallback, it will also be included here.
-     */
-    messages?: Message[];
-}
-
-export declare interface Message extends Ollama.Message {
-    /** Only present when accessed inside of ChatStreamCallback */
-    chunk?: MessageChunk;
-}
-
-export declare interface Tool extends Ollama.Tool {
-    function: {
-        name: string;
-        description?: string;
-        parameters?: any;
-        /** The literal function that should run due to a ToolCall from the model. */
-        callback?: ToolCallback;
-    };
-}
-
-export declare interface MessageChunk {
-    /** The part of the content generated in this chunk (`chat`) */
-    content?: string;
-    /** The part of the response generated in this chunk (`generate`) */
-    response?: string;
-    /** The part of the thinking generated in this chunk (`chat` & `generate`) */
-    thinking?: string;
-    /** The tool_calls in this chunk (`chat`) */
-    tool_calls?: ToolCall[];
-}
-
-/**
- * Return an array of messages to cause a recursive chat generation.
- */
-export declare type ChatStreamCallback = (response: ChatResponse) => Message[] | null | Promise<Message[] | null>;
-export declare type GenerateStreamCallback = (response: GenerateResponse) => void | Promise<void>;
-
-export declare interface OllamaChatRequest extends Ollama.ChatRequest {
-    /** Abort timeout in milliseconds */
-    timeout?: number;
-}
-
-export declare interface OllamaGenerateRequest extends Ollama.GenerateRequest {
-    /** Abort timeout in milliseconds */
-    timeout?: number;
-}
-
-export declare class OllamaChat extends Ollama {
+declare class OllamaChat extends (OllamaBase as new () => Omit<OllamaBase, 'chat' | 'generate'>) {
     /**
      * The saved history of the chat so far.
      * To add messages without causing generations, add to this array.
      * Touching this array during generations may result in undefined behavior.
      */
-    history: Message[];
-    
-    chat(request: OllamaChatRequest, streamCallback?: ChatStreamCallback): Promise<ChatResponse>;
-    generate(request: OllamaGenerateRequest, streamCallback?: GenerateStreamCallback): Promise<GenerateResponse>;
+    history: OllamaChat.Message[];
+
+    chat(request: OllamaChat.ChatRequest, streamCallback?: OllamaChat.ChatStreamCallback): Promise<OllamaChat.ChatResponse>;
+    generate(request: OllamaChat.GenerateRequest, streamCallback?: OllamaChat.GenerateStreamCallback): Promise<OllamaChat.GenerateResponse>;
 }
 
+declare namespace OllamaChat {
+    export type ToolCallback = (call: ollama.ToolCall) => string | Promise<string>;
+
+    export interface GenerateRequest extends ollama.GenerateRequest {
+        stream?: true;
+        /** Abort timeout in milliseconds */
+        timeout?: number;
+    }
+
+    export interface GenerateResponse extends ollama.GenerateResponse {
+        response: string;
+        thinking?: string;
+        chunk?: MessageChunk;
+    }
+
+    export interface ChatRequest extends ollama.ChatRequest {
+        stream?: true;
+        /** Abort timeout in milliseconds */
+        timeout?: number;
+    }
+
+    export interface ChatResponse extends ollama.ChatResponse {
+        /**
+         * Additional messages related to this response. 
+         * If a Message is created due to a ChatStreamCallback, it will also be included here.
+         */
+        messages?: Message[];
+    }
+
+    export interface Message extends ollama.Message {
+        /** Only present when accessed inside of ChatStreamCallback */
+        chunk?: MessageChunk;
+    }
+
+    export interface Tool extends ollama.Tool {
+        function: {
+            name: string;
+            description?: string;
+            parameters?: any;
+            /** The literal function that should run due to a ToolCall from the model. */
+            callback?: ToolCallback;
+        };
+    }
+
+    export interface MessageChunk {
+        /** The part of the content generated in this chunk (`chat`) */
+        content?: string;
+        /** The part of the response generated in this chunk (`generate`) */
+        response?: string;
+        /** The part of the thinking generated in this chunk (`chat` & `generate`) */
+        thinking?: string;
+        /** The tool_calls in this chunk (`chat`) */
+        tool_calls?: ollama.ToolCall[];
+    }
+
+    /**
+     * Return an array of messages to cause a recursive chat generation.
+     */
+    export type ChatStreamCallback = (response: ChatResponse) => Message[] | null | Promise<Message[] | null>;
+    export type GenerateStreamCallback = (response: GenerateResponse) => void | Promise<void>;
+
+}
+
+export = OllamaChat;
