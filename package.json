@@ -1,12 +1,11 @@
 {
     "name": "ollama-chatting",
-    "version": "1.0.0",
-    "description": "Allows you to chat with local Ollama models using the Ollama app's API.",
+    "version": "2.0.0",
+    "description": "Wrapper around ollama to make chat history and timeouts built-in.",
     "keywords": [
         "ollama",
         "ai",
-        "llm",
-        "local"
+        "llm"
     ],
     "homepage": "https://github.com/JeremyGamer13/ollama-chatting#readme",
     "bugs": {
