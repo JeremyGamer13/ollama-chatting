@@ -7,15 +7,103 @@ Wrapper around [`ollama`](https://www.npmjs.com/package/ollama) to make chat his
 Originally implemented OpenAI's API thanks to [the work done by others](#originally-built-upon). Due to the recent addition of tools and other complicated features implemented in the Ollama REST API, I have decided to make this a wrapper around their library instead.
 
 ## Modifications
-- Chat history is baked into the `chat` method
+- Chat history is baked into the `chat` method (accessible via `OllamaChat.history`)
+- Request timeouts are built into `generate` and `chat` via `request.timeout` (milliseconds)
+    - Request timeouts are enforced as a single timer across all recursive requests (seen in the `chat` method)
 - Streaming is handled through callbacks (internally, streaming is enforced; simply await the method with no callback to utilize it as if streaming were disabled)
     - This is for simplicity (especially when dealing with the library having to handle chat history automatically)
-    - When streaming callbacks return a truthy value, it is assumed to be an Ollama `Message` and will be added to chat history.
-        - This is to simplify tool calling.
-        - The `chat` method will be called again with the tool result, and the .
-- Request timeouts are built into `generate` and `chat` via `request.timeout` (milliseconds)
+    - When streaming callbacks return a truthy value, it is assumed to be an array of Ollama `Message`s and will be added to `OllamaChat.history`.
+        - This is to simplify tool calling on tools that do not have a direct `callback`.
+        - The `chat` method will be called again with the new `OllamaChat.history` and the final result of `chat` will be the last message generated.
+            - To access intermediate messages, get them from `ChatResponse.messages`
 - Tools can define their callbacks directly at definition
-    - Define `callback` within a tool  
+    - Define `callback` within a `Tool` to have `OllamaChat` automatically handle the tool callback.
+    - Errors within a tool callback will be given back to the AI model and warned. Catch them within the callback to prevent this behavior.
+    - `chat` will automatically re-run the request with the tool result added to the `OllamaChat.history`.
+        - To access intermediate messages, get them from `ChatResponse.messages`
+
+## Typings
+### Introduced
+```js
+/**
+ * @callback ChatStreamCallback
+ * @param {Ollama.ChatResponse} response
+ * @returns {Ollama.Message[] | null} Return an array of messages to cause a recursive chat generation.
+ */
+/**
+ * @callback GenerateStreamCallback
+ * @param {Ollama.GenerateResponse} response
+ * @returns {void}
+ */
+```
+```js
+/**
+ * The saved history of the chat so far.
+ * To add messages without causing generations, add to this array.
+ * Touching this array during generations may result in undefined behavior.
+ * @type {Array<Ollama.Message>}
+ */
+OllamaChat.history = [];
+```
+```ts
+type ToolCallback = (call: Ollama.ToolCall) => string | Promise<string>;
+
+interface MessageChunk {
+    /** The part of the content generated in this chunk (`chat`) */
+    content?: string;
+    /** The part of the response generated in this chunk (`generate`) */
+    response: string;
+    /** The part of the thinking generated in this chunk (`chat` & `generate`) */
+    thinking?: string;
+    /** The tool_calls in this chunk (`chat`) */
+    tool_calls?: ToolCall[];
+}
+```
+
+### Modified (Ollama)
+```ts
+interface GenerateRequest {
+    // all existing props...
+    stream?: true;
+    /** Abort timeout in milliseconds */
+    timeout?: number;
+}
+interface GenerateResponse {
+    // all existing props...
+    /** The response generated so far (all chunks stitched together) */
+    response: string;
+    /** The thinking generated so far (all chunks stitched together) */
+    thinking?: string;
+    /** The current response chunk to process */
+    chunk?: MessageChunk;
+}
+
+interface ChatRequest {
+    // all existing props...
+    stream?: true;
+    /** Abort timeout in milliseconds */
+    timeout?: number;
+}
+interface ChatResponse {
+    // all existing props...
+    /** Additional messages related to this response. These are likely assistant messages calling tools or tool messages. If a `Message` is created due to a `ChatStreamCallback`, it will also be included here. The `ChatResponse.message` is not included in this array for serialization purposes. */
+    messages?: Message[];
+}
+interface Message {
+    // all existing props...
+    /** The current message chunk to process (only expect this to be present when accessed inside of `ChatStreamCallback`) */
+    chunk?: MessageChunk;
+}
+
+interface Tool {
+    // all existing props...
+    function: {
+        // all existing props...
+        /** The literal function that should run due to a `ToolCall` from the model. */
+        callback?: ToolCallback;
+    };
+}
+```
 
 ## Originally built upon
 ollama-chatting was made using a lot of existing work.

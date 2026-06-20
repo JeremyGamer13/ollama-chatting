@@ -55,9 +55,14 @@ class OllamaChat extends Ollama {
             stream: true,
         });
 
-        // handle timeout (ollama's AbortableAsyncIterable will cancel the request server-side upon .abort())
+        // handle timeout (ollama's AbortableAsyncIterable will cancel the request server-side upon .abort()) (for simplicty we always do setTimeout even if no timeout is provided)
         // NOTE: response.abort() stops ollama early on the server-side, but it seems to acknowledge it as a 200 OK rather than the usual 499 "Client Closed Request"
-        const timeoutId = __internal.timeoutId ? __internal.timeoutId : setTimeout(() => timeout ? response.abort() : null, timeout || 0);
+        // NOTE: timeoutTarget is a funky way of telling the first recursive call to abort the latest request instead of the first request
+        const timeoutTarget = __internal.timeoutTarget ? __internal.timeoutTarget : { target: response };
+        const timeoutId = __internal.timeoutId ? __internal.timeoutId : setTimeout(() => {
+            if (timeout) timeoutTarget.target.abort();
+        }, timeout || 0);
+        timeoutTarget.target = response;
 
         // response is AbortableAsyncIterable<ChatResponse>
         // return response with chunked message put together
@@ -97,18 +102,24 @@ class OllamaChat extends Ollama {
                     content: messageContent,
                     thinking: messageThinking,
                     tool_calls: messageToolCalls,
-                    // NOTE: chunk is not in ollama's spec so updates may override this name
-                    chunk: {
-                        content: chunk.message.content,
-                        thinking: chunk.message.thinking,
-                        tool_calls: chunk.message.tool_calls,
-                    }
                 },
                 messages: __internal.messages
             };
             if (streamCallback) {
+                const chunkResponse = {
+                    ...stitchedResponse,
+                    message: {
+                        ...stitchedResponse.message,
+                        // NOTE: chunk is not in ollama's spec so updates may override this name
+                        chunk: {
+                            content: chunk.message.content,
+                            thinking: chunk.message.thinking,
+                            tool_calls: chunk.message.tool_calls,
+                        },
+                    }
+                }
                 try {
-                    const newMessages = await streamCallback(stitchedResponse);
+                    const newMessages = await streamCallback(chunkResponse);
                     if (newMessages && Array.isArray(newMessages) && newMessages.length > 0) {
                         recursiveMessages = newMessages;
                     }
@@ -165,6 +176,7 @@ class OllamaChat extends Ollama {
                         // NOTE: private state
                         __internal: {
                             timeoutId: timeoutId,
+                            timeoutTarget: timeoutTarget,
                             messages: [
                                 // NOTE: In order, we get the last messages, the AI message, streamCallback messages, and tool callbacks
                                 ...(__internal.messages ? __internal.messages : []),
