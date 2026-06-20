@@ -44,7 +44,7 @@ class OllamaChat extends Ollama {
         // NOTE: __internal is used to pass timeoutId along tool generations
         const { messages, tools, timeout, ...properties } = request;
         const __internal = request.__internal || {};
-        this.history.push(...messages);
+        this.history.push(...(messages || []));
 
         // chat with history
         // NOTE: This returns an AbortableAsyncIterable<ChatResponse> in current `ollama`, so `response` is a controller and `await response` is a message chunk
