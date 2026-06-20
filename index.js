@@ -30,26 +30,21 @@ class OllamaChat extends Ollama {
      * @returns {Promise<import("ollama").ChatResponse>}
      */
     async chat(request, streamCallback) {
-        const { messages, stream, ...properties } = request;
+        // NOTE: timeout is not in ollama's spec so updates may override this name
+        const { messages, timeout, ...properties } = request;
         this.history.push(...messages);
 
         // chat with history
         const response = await super.chat({
             messages: this.history,
-            stream,
             ...properties,
+            stream: true,
         });
 
-        // if (!stream):
-        // response is ChatResponse
-        // return response in full
-        if (!stream) {
-            this.history.push(response.message);
-            return response;
-        }
+        // handle timeout (ollama's AbortableAsyncIterable will cancel the request server-side upon .abort())
+        const timeoutId = setTimeout(() => timeout ? response.abort() : null, timeout || 0);
 
-        // if (stream):
-        // response is AsyncIterable<ChatResponse>
+        // response is AbortableAsyncIterable<ChatResponse>
         // return response with chunked message put together
         let inThinking = false
         let messageContent = "";
@@ -77,17 +72,26 @@ class OllamaChat extends Ollama {
                     ...chunk.message,
                     content: messageContent,
                     thinking: messageThinking,
-                    // NOTE: this is not in ollama's message structure so updates may override this name
+                    // NOTE: chunk is not in ollama's spec so updates may override this name
                     chunk: {
                         content: chunk.message.content,
                         thinking: chunk.message.thinking,
                     }
                 }
             };
-            if (streamCallback) await streamCallback(stitchedResponse);
+            if (streamCallback) {
+                try {
+                    await streamCallback(stitchedResponse);
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    response.abort();
+                    throw err;
+                }
+            }
 
             // if we are done generating then stitchedResponse should contain everything
             if (chunk.done) {
+                clearTimeout(timeoutId);
                 this.history.push(stitchedResponse.message);
                 return stitchedResponse;
             }
@@ -100,21 +104,16 @@ class OllamaChat extends Ollama {
      * @returns {Promise<import("ollama").GenerateResponse>}
      */
     async generate(request, streamCallback) {
-        const { stream, ...properties } = request;
+        const { timeout, ...properties } = request;
         const response = await super.generate({
-            stream,
             ...properties,
+            stream: true,
         });
 
-        // if (!stream):
-        // response is GenerateResponse
-        // return response in full
-        if (!stream) {
-            return response;
-        }
+        // handle timeout (ollama's AbortableAsyncIterable will cancel the request server-side upon .abort())
+        const timeoutId = setTimeout(() => timeout ? response.abort() : null, timeout || 0);
 
-        // if (stream):
-        // response is AsyncIterable<GenerateResponse>
+        // response is AbortableAsyncIterable<GenerateResponse>
         // return response with chunked message put together
         let inThinking = false
         let messageResponse = "";
@@ -146,10 +145,19 @@ class OllamaChat extends Ollama {
                     thinking: chunk.thinking,
                 }
             };
-            if (streamCallback) await streamCallback(stitchedResponse);
+            if (streamCallback) {
+                try {
+                    await streamCallback(stitchedResponse);
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    response.abort();
+                    throw err;
+                }
+            }
 
             // if we are done generating then stitchedResponse should contain everything
             if (chunk.done) {
+                clearTimeout(timeoutId);
                 return stitchedResponse;
             }
         }

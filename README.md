@@ -8,8 +8,14 @@ Originally implemented OpenAI's API thanks to [the work done by others](#origina
 
 ## Modifications
 - Chat history is baked into the `chat` method
-- Streaming is handled through callback
+- Streaming is handled through callbacks (internally, streaming is enforced; simply await the method with no callback to utilize it as if streaming were disabled)
     - This is for simplicity (especially when dealing with the library having to handle chat history automatically)
+    - When streaming callbacks return a truthy value, it is assumed to be an Ollama `Message` and will be added to chat history.
+        - This is to simplify tool calling.
+        - The `chat` method will be called again with the tool result, and the .
+- Request timeouts are built into `generate` and `chat` via `request.timeout` (milliseconds)
+- Tools can define their callbacks directly at definition
+    - Define `callback` within a tool  
 
 ## Originally built upon
 ollama-chatting was made using a lot of existing work.
