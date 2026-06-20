@@ -19,25 +19,14 @@ class OllamaChat extends Ollama {
          * The saved history of the chat so far.
          * To add messages without causing generations, add to this array.
          * Touching this array during generations may result in undefined behavior.
-         * @type {Array<import("ollama").Message>}
+         * @type {Array<import(".").Message>}
          */
         this.history = [];
     }
 
     /**
-     * @callback ChatStreamCallback
-     * @param {import("ollama").ChatResponse} response
-     * @returns {import("ollama").Message[] | null} Return an array of messages to cause a recursive chat generation.
-     */
-    /**
-     * @callback GenerateStreamCallback
-     * @param {import("ollama").GenerateResponse} response
-     * @returns {void}
-     */
-
-    /**
-     * @param {import("ollama").ChatRequest} request 
-     * @param {ChatStreamCallback} streamCallback 
+     * @param {import(".").ChatRequest} request 
+     * @param {import(".").ChatStreamCallback} streamCallback 
      * @returns {Promise<import(".").ChatRequest>}
      */
     async chat(request, streamCallback) {
@@ -197,9 +186,9 @@ class OllamaChat extends Ollama {
     }
 
     /**
-     * @param {import("ollama").GenerateRequest} request 
-     * @param {GenerateStreamCallback} streamCallback 
-     * @returns {Promise<import("ollama").GenerateResponse>}
+     * @param {import(".").GenerateRequest} request 
+     * @param {import(".").GenerateStreamCallback} streamCallback 
+     * @returns {Promise<import(".").GenerateResponse>}
      */
     async generate(request, streamCallback) {
         const { timeout, ...properties } = request;
