@@ -19,7 +19,7 @@
     "license": "MIT",
     "type": "commonjs",
     "main": "index.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+    "dependencies": {
+        "ollama": "^0.6.3"
     }
 }
