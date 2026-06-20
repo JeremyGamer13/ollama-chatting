@@ -34,10 +34,11 @@ class OllamaChat extends Ollama {
      * @param {import("ollama").GenerateResponse} response
      * @returns {void}
      */
+
     /**
      * @param {import("ollama").ChatRequest} request 
      * @param {ChatStreamCallback} streamCallback 
-     * @returns {Promise<import("ollama").ChatResponse>}
+     * @returns {Promise<import(".").ChatRequest>}
      */
     async chat(request, streamCallback) {
         // NOTE: timeout is not in ollama's spec so updates may override this name
