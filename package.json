@@ -1,6 +1,6 @@
 {
     "name": "ollama-chatting",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "description": "Wrapper around ollama to make chat history and timeouts built-in.",
     "keywords": [
         "ollama",
