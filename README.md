@@ -1,6 +1,3 @@
-# Notice
-This is heavily work-in-progress. Do not use for your own projects right now. I am in the process of refining the module for casual use.
-
 # ollama-chatting
 Wrapper around [`ollama`](https://www.npmjs.com/package/ollama) to make chat history and timeouts built-in.
 
