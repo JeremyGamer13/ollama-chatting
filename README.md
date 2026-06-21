@@ -19,6 +19,129 @@ Originally implemented OpenAI's API thanks to [the work done by others](#origina
     - `chat` will automatically re-run the request with the tool result added to the `OllamaChat.history`.
         - To access intermediate messages, get them from `ChatResponse.messages`
 
+## Example
+### Basic Streaming
+```js
+const Ollama = require("ollama-chatting");
+const OllamaChat = new Ollama({ host: "http://localhost:11434" });
+// OllamaChat.chat() returns a Promise<ChatResponse>
+const response = await OllamaChat.chat({
+    model: 'gemma4:e4b',
+    think: true,
+    messages: [{
+        role: "user",
+        content: "Can you write a long introduction of yourself?"
+    }],
+}, (chunk) => {
+    // chunk.message.content & chunk.message.thinking contain stitched together versions of all the chunks so far.
+    // to access this specific chunk's generation, we use chunk.message.chunk
+    if (chunk.message.chunk.thinking) process.stdout.write(chunk.message.chunk.thinking);
+    if (chunk.message.chunk.content) process.stdout.write(chunk.message.chunk.content);
+});
+// response is returned after all chunks are finished
+console.log(response);
+```
+### Tools
+```js
+const Ollama = require("ollama-chatting");
+const OllamaChat = new Ollama({ host: "http://localhost:11434" });
+
+const tools = [
+    {
+        type: 'function',
+        function: {
+            name: 'get_temperature',
+            description: 'Get the current temperature for a city in degrees Fahrenheit',
+            parameters: {
+                type: 'object',
+                required: ['city'],
+                properties: {
+                    city: { type: 'string', description: 'The name of the city' },
+                },
+            },
+            callback: async (call) => {
+                // This callback can be asynchronous, it just needs to return a string at the end.
+                return `54°F ${call.function.arguments.city}`;
+            },
+        },
+    },
+];
+
+const response = await OllamaChat.chat({
+    model: 'gemma4:e4b',
+    think: true,
+    tools,
+    messages: [{
+        role: "user",
+        content: "Please get the current temperature in Austin, Texas."
+    }],
+}, (chunk) => {
+    if (chunk.message.chunk.thinking) process.stdout.write(chunk.message.chunk.thinking);
+    if (chunk.message.chunk.content) process.stdout.write(chunk.message.chunk.content);
+});
+// This response will only return the last message in the chain of messages.
+// To obtain all previous messages, get response.messages
+console.log(response);
+```
+### Tools (through ChatStreamCallback)
+```js
+const Ollama = require("ollama-chatting");
+const OllamaChat = new Ollama({ host: "http://localhost:11434" });
+
+// Regular array of ollama compliant tools
+const tools = [
+    {
+        type: 'function',
+        function: {
+            name: 'get_temperature',
+            description: 'Get the current temperature for a city in degrees Fahrenheit',
+            parameters: {
+                type: 'object',
+                required: ['city'],
+                properties: {
+                    city: { type: 'string', description: 'The name of the city' },
+                },
+            },
+        },
+    },
+];
+
+const response = await OllamaChat.chat({
+    model: 'gemma4:e4b',
+    think: true,
+    tools,
+    messages: [{
+        role: "user",
+        content: "Please get the current temperature in Austin, Texas."
+    }],
+}, async (chunk) => {
+    if (chunk.message.chunk.thinking) process.stdout.write(chunk.message.chunk.thinking);
+    if (chunk.message.chunk.content) process.stdout.write(chunk.message.chunk.content);
+    
+    // Remember that chunk.message contains the stitched together information from all previous chunks.
+    // Check that this chunk is the final chunk, and get the stitched tool_calls to run.
+    if (chunk.done && chunk.message.tool_calls) {
+        // To make a tool response, we need to return Message[] in the ChatStreamCallback.
+        const newMessages = [];
+        for (const call of chunk.message.tool_calls) {
+            switch (call.function.name) {
+                case "get_temperature":
+                    newMessages.push({
+                        role: "tool",
+                        tool_name: "get_temperature",
+                        content: `54°F ${call.function.arguments.city}`,
+                    });
+                    break;
+            }
+        }
+        return newMessages;
+    }
+});
+// This response will only return the last message in the chain of messages.
+// To obtain all previous messages, get response.messages
+console.log(response);
+```
+
 ## Typings
 ### Introduced
 ```js
