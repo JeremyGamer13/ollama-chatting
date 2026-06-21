@@ -32,8 +32,8 @@ class OllamaChat extends Ollama {
     async chat(request, streamCallback) {
         // NOTE: timeout is not in ollama's spec so updates may override this name
         // NOTE: __internal is used to pass timeoutId along tool generations
-        const { messages, tools, timeout, ...properties } = request;
-        const __internal = request.__internal || {};
+        const { messages, tools, timeout, __internal, ...properties } = request;
+        const internalLeftover = request.__internal || {};
         this.history.push(...(messages || []));
 
         // chat with history
@@ -48,8 +48,8 @@ class OllamaChat extends Ollama {
         // handle timeout (ollama's AbortableAsyncIterable will cancel the request server-side upon .abort()) (for simplicty we always do setTimeout even if no timeout is provided)
         // NOTE: response.abort() stops ollama early on the server-side, but it seems to acknowledge it as a 200 OK rather than the usual 499 "Client Closed Request"
         // NOTE: timeoutTarget is a funky way of telling the first recursive call to abort the latest request instead of the first request
-        const timeoutTarget = __internal.timeoutTarget ? __internal.timeoutTarget : { target: response };
-        const timeoutId = __internal.timeoutId ? __internal.timeoutId : setTimeout(() => {
+        const timeoutTarget = internalLeftover.timeoutTarget ? internalLeftover.timeoutTarget : { target: response };
+        const timeoutId = internalLeftover.timeoutId ? internalLeftover.timeoutId : setTimeout(() => {
             if (timeout) timeoutTarget.target.abort();
         }, timeout || 0);
         timeoutTarget.target = response;
@@ -93,7 +93,7 @@ class OllamaChat extends Ollama {
                     thinking: messageThinking,
                     tool_calls: messageToolCalls,
                 },
-                messages: __internal.messages
+                messages: internalLeftover.messages
             };
             if (streamCallback) {
                 const chunkResponse = {
@@ -169,7 +169,7 @@ class OllamaChat extends Ollama {
                             timeoutTarget: timeoutTarget,
                             messages: [
                                 // NOTE: In order, we get the last messages, the AI message, streamCallback messages, and tool callbacks
-                                ...(__internal.messages ? __internal.messages : []),
+                                ...(internalLeftover.messages ? internalLeftover.messages : []),
                                 stitchedResponse.message,
                                 ...(recursiveMessages ? recursiveMessages : []),
                                 ...toolsUsed
