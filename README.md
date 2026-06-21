@@ -115,6 +115,7 @@ const response = await OllamaChat.chat({
         content: "Please get the current temperature in Austin, Texas."
     }],
 }, async (chunk) => {
+    // ChatStreamCallback can also be asynchronous.
     if (chunk.message.chunk.thinking) process.stdout.write(chunk.message.chunk.thinking);
     if (chunk.message.chunk.content) process.stdout.write(chunk.message.chunk.content);
     
